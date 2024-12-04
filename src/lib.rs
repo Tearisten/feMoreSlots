@@ -32,7 +32,7 @@ pub struct StringBuilder{
 
 #[unity::class("App", "InfoUtil")]
 pub struct InfoUtil{
-    pub emptyStringBuilder: StringBuilder
+    //pub emptyStringBuilder: StringBuilder
 	// private static readonly StringBuilder s_EmptyStringBuilder; // 0x0
 }
 
@@ -46,8 +46,13 @@ pub struct StatusSkill {
 #[skyline::from_offset(0x3780700)]
 pub fn is_null_empty(this: &Il2CppString, method_info: OptionalMethod) -> bool;
 
+#[skyline::from_offset(0x2486FC0)]
+pub fn skillarray_exists(this: &SkillArray, _method_info: u64) -> bool;
+
+
+
 #[unity::from_offset("App", "Unit", "get_EquipSkill")]
-pub fn get_equiped_skills(this: &Unit, _method_info: u64) -> &'static SkillArray;
+pub fn get_equiped_skills(this: &Unit, _method_info: u64) -> Option<&SkillArray>;
 
 // #[unity::from_offset("App", "InfoUtil_StatusSkill", "set_IsActive")]
 #[skyline::from_offset(0x1FC7310)]
@@ -62,51 +67,26 @@ pub fn set_category(this: &mut StatusSkill, cat: u32, _method_info: u64);
 pub fn set_data(this: &mut StatusSkill, value: &SkillData, _method_info: u64);
 
 #[unity::hook("App", "InfoUtil", "GetSkillListForUnitInfo")]
-pub fn get_skill_list(this: &InfoUtil, unit: &Unit, is_equip: bool, is_pack: bool, size: i32, _method_info : u64) -> &'static mut Array<&'static mut StatusSkill>
-{
+pub fn get_skill_list(this: &InfoUtil, unit: Option<&Unit>, is_equip: bool, is_pack: bool, size: i32, _method_info : u64) -> &'static mut Array<&'static mut StatusSkill>
+{unsafe{
+
     let mut original = call_original!(this, unit, is_equip, is_pack, size, _method_info);
-    unsafe
+    if let Some(person) = unit
     {
-        
-        // skyline::error::show_error(
-        //     69,
-        //     "Tristen",
-        //     "Called yay"
-        // );
-
-        if !is_equip && Some(original).is_some() && Some(unit).is_some()
+        if let Some(equips) = get_equiped_skills(person, _method_info)
         {
-            let equips = &unit.equip_skill;
-            // this is the empty skill
-            // set_data(original[0], SkillData::try_index_get(0).unwrap(), _method_info);
-            // skyline::error::show_error(
-            //     69,
-            //     "Tristen",
-            //     "Called 1"
-            // );
-            // for x in 0..equips.len()
-            // {
+            if equips.list.size > 0 // bad memory read errors hereD
+            {
+                let skill0 = &equips[0];
+                if let Some(sid) = skill0.get_skill()
+                {
 
-
-            //     // set_data(original[x], equips[x].get_skill().unwrap(), _method_info);
-            // }
- 
-            
-            // for x in original.len()-1..4
-            // {
-            //     original[x] = original[x-1];
-            // }
-            // for x in 2..5
-            // {
-            //     // set_is_active(original[x], false, _method_info);
-            //     // set_category(original[x], 11, _method_info);
-            //     let empty : &'static SkillData;
-            //     set_data(original[x], empty, _method_info);
-            // }
+                }
+            }
         }
-    }
+    }   
     return original;
-}
+}}
 
 
 #[skyline::main(name = "moreSlots")]
@@ -160,7 +140,7 @@ pub fn main() {
 
     // set get list arrray size
     //02911058 74 01 80 52
-    Patch::in_text(0x02911058).bytes(&[0x74, 0x01, 0x80, 0x52]).unwrap();
+    // Patch::in_text(0x02911058).bytes(&[0x74, 0x01, 0x80, 0x52]).unwrap();
 
 
     install_hook!(get_skill_list);
