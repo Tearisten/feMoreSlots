@@ -6,7 +6,8 @@ use cobapi::{Event, SystemEvent};
 use engage::{
     gamedata::skill::*,
     gamedata::unit::Unit,
-    gamedata::*
+    gamedata::*,
+    force::ForceType
 };
 use skyline::patching::Patch;
 use unity::il2cpp::object::Array;
@@ -38,7 +39,7 @@ pub struct InfoUtil{
 
 #[unity::class("App", "InfoUtil_StatusSkill")]
 pub struct StatusSkill {
-    pub skill_data: &'static SkillData,
+    pub skill_data: Option<&'static SkillData>,
     pub is_active: bool,
     pub category: u32
 }
@@ -56,35 +57,65 @@ pub fn get_equiped_skills(this: &Unit, _method_info: u64) -> Option<&SkillArray>
 
 // #[unity::from_offset("App", "InfoUtil_StatusSkill", "set_IsActive")]
 #[skyline::from_offset(0x1FC7310)]
-pub fn set_is_active(this: &mut StatusSkill, active: bool, _method_info: u64);
+pub fn set_is_active(this: &StatusSkill, active: bool, _method_info: u64);
 
 // #[unity::from_offset("App", "InfoUtil_StatusSkill", "set_Category")]
 #[skyline::from_offset(0x1FC7330)]
-pub fn set_category(this: &mut StatusSkill, cat: u32, _method_info: u64);
+pub fn set_category(this: &StatusSkill, cat: i32, _method_info: u64);
 
 // #[unity::from_offset("App", "InfoUtil_StatusSkill", "set_Data")]
 #[skyline::from_offset(0x1FC72F0)]
-pub fn set_data(this: &mut StatusSkill, value: &SkillData, _method_info: u64);
+pub fn set_data(this: &StatusSkill, value: Option<&SkillData>, _method_info: u64);
 
+
+
+// pub fn infoutil_getskilllistforunitinfo(unit: &Unit, isskillequip: bool, ispack: bool, size: i32 , method_info: OptionalMethod) -> &Array<Option<&'static StatusSkill>>
+    
 #[unity::hook("App", "InfoUtil", "GetSkillListForUnitInfo")]
-pub fn get_skill_list(this: &InfoUtil, unit: Option<&Unit>, is_equip: bool, is_pack: bool, size: i32, _method_info : u64) -> &'static mut Array<&'static mut StatusSkill>
+pub fn get_skill_list(unit: Option<&Unit>, is_equip: bool, is_pack: bool, mut size: i32, _method_info : u64) -> &mut Array<&'static StatusSkill>
 {unsafe{
+    
+    size = 13;
+    let mut original: &mut Array<&StatusSkill> = call_original!(unit, is_equip, is_pack, size, _method_info);
 
-    let mut original = call_original!(this, unit, is_equip, is_pack, size, _method_info);
-    if let Some(person) = unit
+    if is_equip
     {
-        if let Some(equips) = get_equiped_skills(person, _method_info)
+        if let Some(person) = unit
         {
-            if equips.list.size > 0 // bad memory read errors hereD
+            // ignore foe
+            if person.person.get_asset_force() == ForceType::Player as i32
             {
-                let skill0 = &equips[0];
-                if let Some(sid) = skill0.get_skill()
+                if let Some(equips) = get_equiped_skills(person, _method_info)
                 {
-
+                    // make room for the new equip skill slots
+                    for x in (5..original.len()).rev()
+                    {
+                        original[x] = original[x-3];
+                    }
+                    for x in 0..5
+                    {
+                        if let Some(equipedSkill) = equips[x as usize].get_skill()
+                        {
+                            set_category(original[x as usize], 11, _method_info); 
+                            let sid = equipedSkill.sid.get_string().unwrap_or("".to_string());
+                            if sid == "SID_無し" || sid == "無し" || sid == ""
+                            {
+                                set_data(original[x as usize], None, _method_info);
+                                set_is_active(original[x as usize], false, _method_info);
+                            }
+                            else
+                            {
+                                set_data(original[x as usize], Some(equipedSkill), _method_info);
+                                set_is_active(original[x as usize], true, _method_info);
+                            }
+                        }
+                    }
                 }
             }
         }
-    }   
+    }
+    
+      
     return original;
 }}
 
@@ -126,9 +157,6 @@ pub fn main() {
         );
     }));
 
-    // category on equip screen
-    // Patch::in_text(0x0249b27c).bytes(&[0x60, 0x01, 0x80,0x52]).unwrap();
-
     // chekcs in add skill for max count (5 now)
     // 01a35fd0 && 01a35ff
     Patch::in_text(0x01a35fd0).bytes(&[0x1f, 0x11, 0x00, 0x71]).unwrap();
@@ -136,12 +164,16 @@ pub fn main() {
 
     // set color change count to 5
     // 0249b3f8 3f 11 00 71
-    Patch::in_text(0x0249b3f8).bytes(&[0x3f, 0x11, 0x00, 0x71]).unwrap();
+    // never called?
+    // Patch::in_text(0x0249b3f8).bytes(&[0x3f, 0x11, 0x00, 0x71]).unwrap();
 
-    // set get list arrray size
-    //02911058 74 01 80 52
-    // Patch::in_text(0x02911058).bytes(&[0x74, 0x01, 0x80, 0x52]).unwrap();
 
+    // remove auto return on inheritance update thingy
+    Patch::in_text(0x0249b394).bytes(&[0xC0, 0x01, 0x00, 0x54]).unwrap();
+
+    // make eskill list only 5 items in the UI
+    // 37 00 00 14
+    Patch::in_text(0x02499c8c).bytes(&[0x37, 0x00, 0x00, 0x14]).unwrap();
 
     install_hook!(get_skill_list);
 }
