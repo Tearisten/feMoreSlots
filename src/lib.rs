@@ -172,8 +172,12 @@ pub fn main() {
     Patch::in_text(0x0249b394).bytes(&[0xC0, 0x01, 0x00, 0x54]).unwrap();
 
     // make eskill list only 5 items in the UI
-    // 37 00 00 14
-    Patch::in_text(0x02499c8c).bytes(&[0x37, 0x00, 0x00, 0x14]).unwrap();
+    // PUT BACK LATER THIS SHOWS US WHATS WRONG WITH THE PERCEPTION THING
+    // Patch::in_text(0x02499c8c).bytes(&[0x37, 0x00, 0x00, 0x14]).unwrap();
+
+    //test patch for count
+    // 7102499d50 48 01 80 52     mov        w8,#0xa
+    Patch::in_text(0x02499d50).bytes(&[0x48, 0x01, 0x80, 0x52]).unwrap();
 
     install_hook!(get_skill_list);
 }
