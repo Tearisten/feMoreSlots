@@ -1,13 +1,16 @@
 #![feature(ptr_sub_ptr)]
 
 use unity::prelude::*;
+use unity::system::List;
+use unity::il2cpp::assembly::Il2CppImage;
 use skyline::install_hook;
 use cobapi::{Event, SystemEvent};
 use engage::{
     gamedata::skill::*,
     gamedata::unit::Unit,
     gamedata::*,
-    force::ForceType
+    force::ForceType,
+    tmpro::TextMeshProUGUI,
 };
 use skyline::patching::Patch;
 use unity::il2cpp::object::Array;
@@ -41,16 +44,186 @@ pub struct InfoUtil{
 pub struct StatusSkill {
     pub skill_data: Option<&'static SkillData>,
     pub is_active: bool,
-    pub category: u32
+    pub category: i32
 }
+
+#[unity::class("App", "UnitStatusSetter_SkillSetter")]
+// #[derive(Clone, Copy)]
+pub struct SkillSetter {
+    pub root: *mut GameObject,
+    pub icon: *mut Il2CppImage,//8
+    pub name: *mut TextMeshProUGUI,//16
+    pub godImage: *mut Il2CppImage,
+    pub style: *mut i64,
+    pub setter: *mut UnitStatusSetter
+}
+
+#[unity::class("App", "UnitStatusSetter")]
+pub struct UnitStatusSetter {
+    pad1: [u8; 0xf8],
+    pub skillRoot: *mut i64,// 100
+    pad2: [u8; 0x1], //108
+    pub list: &'static mut List<SkillSetter>
+}
+
+#[unity::class("UnityEngine", "GameObject")]
+pub struct GameObject{
+
+}
+
+#[unity::class("UnityEngine", "Quaternion")]
+pub struct Quaternion{
+
+}
+
+#[unity::class("UnityEngine", "Vector3")]
+pub struct Vector3{
+    pub x: f32, // 0x0
+	pub y: f32, // 0x4
+	pub z: f32 // 0x8
+    //more
+}
+
+#[unity::class("UnityEngine", "Vector2")]
+pub struct Vector2{
+    pub x: f32, // 0x0
+	pub y: f32, // 0x4
+}
+
+#[unity::class("UnityEngine", "RectTransform")]
+pub struct RectTransform{
+    
+}
+
+#[unity::class("UnityEngine", "Transform")]
+pub struct Transform{
+    
+}
+
+#[unity::class("UnityEngine", "Rect")]
+pub struct Rect{
+   pub xMin: &'static mut f32,
+   pub yMin: &'static mut f32,
+   pub xSize: &'static mut f32,
+   pub ySize: &'static mut f32,
+}
+
+// #[unity::hook("App", "UnitStatusSetter", "SetSkill")]
+// pub fn set_skill(this: &'static mut UnitStatusSetter, unit: &Unit, _method_info : u64)
+// {unsafe{
+
+//     if (this.list.capacity() != 13)
+//     {
+//         this.list.resize(13);
+//     }
+
+//     while (this.list.len() != 13)
+//     {
+//         let dupeb :&mut Il2CppClass = this.list[2].get_class().clone();
+//         let newSetterb = il2cpp::instantiate_class::<SkillSetter>(dupeb).unwrap();
+        
+//         // alrady set?
+//         newSetterb.root = this.skillRoot;
+
+//         let dupet :&mut Il2CppClass = (*this.list[0].name).get_class().clone();
+//         let newSettert = il2cpp::instantiate_class::<TextMeshProUGUI>(dupet).unwrap();
+
+//         newSetterb.name = newSettert;
+//         // newSetter.setter = &mut *this;
+
+//         skill_setter_init(newSetterb, this, _method_info);
+
+//         this.list.add(newSetterb);
+//     }
+
+//     // let val = format!("{} {}", this.list.len(), this.list.capacity());
+
+//     // skyline::error::show_error(
+//     //     69,
+//     //     "Custom plugin has panicked! Please open the details and send a screenshot to the developer, then close the game.\n\0",
+//     //     val.as_str(),
+//     // );
+//     call_original!(this, unit, _method_info);
+
+// }}
+
+#[unity::hook("App", "UnitStatusSetter", "Init")]
+pub fn init_skill_ui(this: &'static mut UnitStatusSetter, _method_info : u64)
+{
+unsafe{
+    if (this.list.capacity() != 13)
+    {
+        this.list.resize(13);
+        let err_msg = format!("{}", this.list.capacity());
+
+        // We call the native Error dialog of the Nintendo Switch with this convenient method.
+        // The error code is set to 69 because we do need a value, while the first message displays in the popup and the second shows up when pressing Details.
+        skyline::error::show_error(
+            69,
+            "Custom plugin has panicked! Please open the details and send a screenshot to the developer, then close the game.\n\0",
+            err_msg.as_str(),
+        );
+    }
+}
+
+    call_original!(this, _method_info);
+
+}
+
+// #[skyline::from_offset(0x2595CD0)] // use a non templated copy like 0x32EF200
+// pub fn clone_go(original: &GameObject, pos: Vector3, rot: Quaternion, parent: Transform, _method_info: u64) -> GameObject;
+// doesn't have a gameobject version
+
+#[skyline::from_offset(0x2C4DCF0)]
+pub fn get_component_rect(original: &GameObject, strn : &Il2CppString, _method_info: u64) -> &'static RectTransform;
+
+#[skyline::from_offset(0x2F7C3F0)]
+pub fn get_transform_rect(original: &RectTransform, _method_info: u64) -> &'static mut Rect;
+
+#[skyline::from_offset(0x2F7AE50)]
+pub fn get_ymin(original: &Rect, _method_info: u64) -> f32;
+
+#[skyline::from_offset(0x2F7AE90)]
+pub fn get_ymax(original: &Rect, _method_info: u64) -> f32;
+
+#[skyline::from_offset(0x2F7ADB0)]
+pub fn set_y(original: &Rect, f : f32, _method_info: u64);
+
+#[skyline::from_offset(0x2F7AEC0)]
+pub fn get_height(original: &Rect, _method_info: u64) -> f32;
+
+#[skyline::from_offset(0x2F7DD60)]
+pub fn get_parent_rect(original: &RectTransform, _method_info: u64) -> &'static mut Rect;
+
+// #[skyline::from_offset(0x2F7ADC0)]
+// pub fn get_xy(original: &Rect, _method_info: u64) -> &'static mut Vector2;
+
+// #[skyline::from_offset(0x2595AF0)]
+// pub fn clone_go(original: &GameObject, parent: Transform, staysPos: bool, _method_info: u64) -> GameObject;
+
+// #[skyline::from_offset(0x02c4e880)]
+// pub fn get_transform(this: &GameObject, _method_info: u64) -> &'static mut Transform;
+
+#[skyline::from_offset(0x378F9F0)]
+pub fn get_local_position(this: &RectTransform, _method_info: u64) -> &'static mut &mut Vector3;
+
+#[skyline::from_offset(0x3797C60)]
+pub fn get_vec_item_at_index(this: &Vector3, index: i32, _method_info: u64) -> &'static f32;
+
+// #[skyline::from_offset(0x378FAA0)]
+// pub fn set_position(this: &Transform, vec: &Vector3, _method_info: u64);
+
+#[skyline::from_offset(0x378FE20)]
+pub fn get_rotation(this: &Transform, _method_info: u64) -> Quaternion;
+
+#[skyline::from_offset(0x37909F0)]
+pub fn get_parent(this: &Transform, _method_info: u64) -> Transform;
 
 #[skyline::from_offset(0x3780700)]
 pub fn is_null_empty(this: &Il2CppString, method_info: OptionalMethod) -> bool;
 
 #[skyline::from_offset(0x2486FC0)]
 pub fn skillarray_exists(this: &SkillArray, _method_info: u64) -> bool;
-
-
 
 #[unity::from_offset("App", "Unit", "get_EquipSkill")]
 pub fn get_equiped_skills(this: &Unit, _method_info: u64) -> Option<&SkillArray>;
@@ -67,19 +240,24 @@ pub fn set_category(this: &StatusSkill, cat: i32, _method_info: u64);
 #[skyline::from_offset(0x1FC72F0)]
 pub fn set_data(this: &StatusSkill, value: Option<&SkillData>, _method_info: u64);
 
+#[skyline::from_offset(0x1B59230)]
+pub fn skill_setter_init(this: &SkillSetter, status: &mut UnitStatusSetter, _method_info: u64);
+
+// #[skyline::from_offset(0x1B59230)]
+// pub fn skill_setter_ctor(this: &SkillSetter, _method_info: u64);
 
 
 // pub fn infoutil_getskilllistforunitinfo(unit: &Unit, isskillequip: bool, ispack: bool, size: i32 , method_info: OptionalMethod) -> &Array<Option<&'static StatusSkill>>
     
 #[unity::hook("App", "InfoUtil", "GetSkillListForUnitInfo")]
-pub fn get_skill_list(unit: Option<&Unit>, is_equip: bool, is_pack: bool, mut size: i32, _method_info : u64) -> &mut Array<&'static StatusSkill>
+pub fn get_skill_list(unit: Option<&Unit>, is_equip: bool, is_pack: bool, mut size: i32, _method_info : u64) -> &'static mut Array<&'static StatusSkill>
 {unsafe{
     
     size = 13;
-    let mut original: &mut Array<&StatusSkill> = call_original!(unit, is_equip, is_pack, size, _method_info);
+    let mut original: &'static mut Array<&'static StatusSkill> = call_original!(unit, true, is_pack, size, _method_info);
 
-    if is_equip
-    {
+    // if original.len() >= 10 // only used on equip screen
+    // {
         if let Some(person) = unit
         {
             // ignore foe
@@ -92,10 +270,13 @@ pub fn get_skill_list(unit: Option<&Unit>, is_equip: bool, is_pack: bool, mut si
                     {
                         original[x] = original[x-3];
                     }
-                    for x in 0..5
+                    for x in 2..5
                     {
                         if let Some(equipedSkill) = equips[x as usize].get_skill()
                         {
+                            let dupet :&mut Il2CppClass = (original[x]).get_class().clone();
+                            let newt = il2cpp::instantiate_class::<StatusSkill>(dupet).unwrap();
+                            original[x as usize] = newt;
                             set_category(original[x as usize], 11, _method_info); 
                             let sid = equipedSkill.sid.get_string().unwrap_or("".to_string());
                             if sid == "SID_無し" || sid == "無し" || sid == ""
@@ -113,11 +294,15 @@ pub fn get_skill_list(unit: Option<&Unit>, is_equip: bool, is_pack: bool, mut si
                 }
             }
         }
-    }
-    
+    // }
       
     return original;
 }}
+
+
+
+
+
 
 
 #[skyline::main(name = "moreSlots")]
@@ -165,7 +350,7 @@ pub fn main() {
     // set color change count to 5
     // 0249b3f8 3f 11 00 71
     // never called?
-    // Patch::in_text(0x0249b3f8).bytes(&[0x3f, 0x11, 0x00, 0x71]).unwrap();
+    // Patch::in_text(0x0249b3f8).bytes(&[0x3f, 0x11, 0x00, 0x71]).unwrap();zx
 
 
     // remove auto return on inheritance update thingy
@@ -173,11 +358,16 @@ pub fn main() {
 
     // make eskill list only 5 items in the UI
     // PUT BACK LATER THIS SHOWS US WHATS WRONG WITH THE PERCEPTION THING
-    // Patch::in_text(0x02499c8c).bytes(&[0x37, 0x00, 0x00, 0x14]).unwrap();
+    Patch::in_text(0x02499c8c).bytes(&[0x37, 0x00, 0x00, 0x14]).unwrap();
 
-    //test patch for count
-    // 7102499d50 48 01 80 52     mov        w8,#0xa
-    Patch::in_text(0x02499d50).bytes(&[0x48, 0x01, 0x80, 0x52]).unwrap();
+    // stop the auto sizing
+    //      7101c699d8 13 00 00 14     b          LAB_7101c69a24
+    // Patch::in_text(0x01c699d8).bytes(&[0x13, 0x00, 0x00, 0x14]).unwrap();
+    
+    // remove the 2nd index skip when 1st index is empty 
+    // from the equip menu
+    Patch::in_text(0x0249d318).bytes(&[0x18, 0x00, 0x00, 0x14]).unwrap();
 
     install_hook!(get_skill_list);
+    // install_hook!(init_skill_ui);
 }
