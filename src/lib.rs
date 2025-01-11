@@ -36,7 +36,6 @@ pub struct StatusSkill {
 }
 
 #[unity::class("App", "UnitStatusSetter_SkillSetter")]
-// #[derive(Clone, Copy)]
 pub struct SkillSetter {
     pub root: *mut GameObject,
     pub icon: *mut Il2CppImage,//8
