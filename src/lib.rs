@@ -79,7 +79,7 @@ pub fn get_skill_list(unit: Option<&Unit>, is_equip: bool, is_pack: bool, mut si
 {unsafe{
     
     size = 13;
-    let mut original: &'static mut Array<&'static StatusSkill> = call_original!(unit, true, false, size, _method_info);
+    let original: &'static mut Array<&'static StatusSkill> = call_original!(unit, true, false, size, _method_info);
 
     if is_pack || is_equip
     {
@@ -99,8 +99,8 @@ pub fn get_skill_list(unit: Option<&Unit>, is_equip: bool, is_pack: bool, mut si
                     {
                         if let Some(equipedSkill) = equips[x as usize].get_skill()
                         {
-                            let dupet :&mut Il2CppClass = (original[x]).get_class().clone();
-                            let newt = il2cpp::instantiate_class::<StatusSkill>(dupet).unwrap();
+                            let dupet = Il2CppClass::from_name("App", "InfoUtil").unwrap().get_nested_types().iter().find(|x| x.get_name() == "StatusSkill").unwrap();
+                            let newt: &'static StatusSkill = il2cpp::instantiate_class::<StatusSkill>(dupet).unwrap();
                             original[x as usize] = newt;
                             set_category(original[x as usize], 11, _method_info); 
                             let sid = equipedSkill.sid.get_string().unwrap_or("".to_string());
@@ -165,14 +165,14 @@ pub fn main() {
     Patch::in_text(0x01a35fd0).bytes(&[0x1f, 0x11, 0x00, 0x71]).unwrap();
     Patch::in_text(0x01a35ff8).bytes(&[0x1f, 0x11, 0x00, 0x71]).unwrap();
 
-    // remove auto return on inheritance update thingy
+    // // remove auto return on inheritance update thingy
     Patch::in_text(0x0249b394).bytes(&[0xC0, 0x01, 0x00, 0x54]).unwrap();
 
-    // make eskill list only 5 items in the UI
+    // // make eskill list only 5 items in the UI
     Patch::in_text(0x02499c8c).bytes(&[0x37, 0x00, 0x00, 0x14]).unwrap();
 
-    // remove the 2nd index skip when 1st index is empty 
-    // from the equip menu
+    // // remove the 2nd index skip when 1st index is empty 
+    // // from the equip menu
     Patch::in_text(0x0249d318).bytes(&[0x18, 0x00, 0x00, 0x14]).unwrap();
 
     install_hook!(get_skill_list);
