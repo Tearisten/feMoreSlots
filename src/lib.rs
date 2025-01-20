@@ -65,9 +65,15 @@ pub fn get_equiped_skills(this: &Unit, _method_info: u64) -> Option<&SkillArray>
 #[skyline::from_offset(0x1FC7310)]
 pub fn set_is_active(this: &StatusSkill, active: bool, _method_info: u64);
 
+#[skyline::from_offset(0x1FC7300)]
+pub fn get_is_active(this: &StatusSkill, _method_info: u64) -> bool;
+
 // #[unity::from_offset("App", "InfoUtil_StatusSkill", "set_Category")]
 #[skyline::from_offset(0x1FC7330)]
 pub fn set_category(this: &StatusSkill, cat: i32, _method_info: u64);
+
+#[skyline::from_offset(0x1FC7320)]
+pub fn get_category(this: &StatusSkill, _method_info: u64) -> i32;
 
 // #[unity::from_offset("App", "InfoUtil_StatusSkill", "set_Data")]
 #[skyline::from_offset(0x1FC72F0)]
@@ -79,7 +85,7 @@ pub fn get_skill_list(unit: Option<&Unit>, is_equip: bool, is_pack: bool, mut si
 {unsafe{
     
     size = 13;
-    let original: &'static mut Array<&'static StatusSkill> = call_original!(unit, true, false, size, _method_info);
+    let original: &'static mut Array<&'static StatusSkill> = call_original!(unit, is_equip, is_pack, size, _method_info);
 
     if is_pack || is_equip
     {
@@ -90,14 +96,42 @@ pub fn get_skill_list(unit: Option<&Unit>, is_equip: bool, is_pack: bool, mut si
             {
                 if let Some(equips) = get_equiped_skills(person, _method_info)
                 {
+
+                    let mut start = 0;
+                    let mut fin = 13;
+                    let mut offset = 0;
+                    if is_equip
+                    {
+                        //realstart = 0
+                        start = 2;
+                        fin = 5;
+                    }
+                    else if is_pack
+                    {
+                        // if job skill present 
+                        if get_category(original[1], _method_info) == 2 && get_is_active(original[1], _method_info)
+                        {
+                            offset = 2;
+                            start = 4;
+                            fin = 7;
+                        }
+                        else
+                        {
+                            offset = 1;
+                            start = 3;
+                            fin = 6;
+                        }
+
+                    }
+
                     // make room for the new equip skill slots
-                    for x in (5..original.len()).rev()
+                    for x in (fin..original.len()).rev()
                     {
                         original[x] = original[x-3];
                     }
-                    for x in 2..5
+                    for x in start..fin
                     {
-                        if let Some(equipedSkill) = equips[x as usize].get_skill()
+                        if let Some(equipedSkill) = equips[x - offset as usize].get_skill()
                         {
                             let dupet = Il2CppClass::from_name("App", "InfoUtil").unwrap().get_nested_types().iter().find(|x| x.get_name() == "StatusSkill").unwrap();
                             let newt: &'static StatusSkill = il2cpp::instantiate_class::<StatusSkill>(dupet).unwrap();
