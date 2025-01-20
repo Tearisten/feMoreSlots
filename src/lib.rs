@@ -79,6 +79,10 @@ pub fn get_category(this: &StatusSkill, _method_info: u64) -> i32;
 #[skyline::from_offset(0x1FC72F0)]
 pub fn set_data(this: &StatusSkill, value: Option<&SkillData>, _method_info: u64);
 
+
+
+#[skyline::from_offset(0x1A52530)]
+pub fn get_unit_force(this: &Unit, _method_info: u64) -> i32;
     
 #[unity::hook("App", "InfoUtil", "GetSkillListForUnitInfo")]
 pub fn get_skill_list(unit: Option<&Unit>, is_equip: bool, is_pack: bool, mut size: i32, _method_info : u64) -> &'static mut Array<&'static StatusSkill>
@@ -92,7 +96,8 @@ pub fn get_skill_list(unit: Option<&Unit>, is_equip: bool, is_pack: bool, mut si
         if let Some(person) = unit
         {
             // ignore foe
-            if person.person.get_asset_force() == ForceType::Player as i32
+            // if person.person.get_asset_force() == ForceType::Player as i32
+            if get_unit_force(person, _method_info) == ForceType::Player as i32
             {
                 if let Some(equips) = get_equiped_skills(person, _method_info)
                 {
