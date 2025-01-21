@@ -91,19 +91,20 @@ pub fn get_skill_list(unit: Option<&Unit>, is_equip: bool, is_pack: bool, mut si
     size = 13;
     let original: &'static mut Array<&'static StatusSkill> = call_original!(unit, is_equip, is_pack, size, _method_info);
 
-    if is_pack || is_equip
-    {
+    // if is_pack || is_equip
+    // {
         if let Some(person) = unit
         {
             // ignore foe
             // if person.person.get_asset_force() == ForceType::Player as i32
-            if get_unit_force(person, _method_info) == ForceType::Player as i32
+            let force = get_unit_force(person, _method_info);
+            if force == ForceType::Player as i32 || force == ForceType::Absent as i32
             {
                 if let Some(equips) = get_equiped_skills(person, _method_info)
                 {
 
                     let mut start = 0;
-                    let mut fin = 13;
+                    let mut fin = size as usize;
                     let mut offset = 0;
                     if is_equip
                     {
@@ -111,19 +112,19 @@ pub fn get_skill_list(unit: Option<&Unit>, is_equip: bool, is_pack: bool, mut si
                         start = 2;
                         fin = 5;
                     }
-                    else if is_pack
+                    else //if is_pack
                     {
                         // if job skill present 
                         if get_category(original[1], _method_info) == 2 && get_is_active(original[1], _method_info)
                         {
                             offset = 2;
-                            start = 4;
+                            start = 2;
                             fin = 7;
                         }
                         else
                         {
                             offset = 1;
-                            start = 3;
+                            start = 1;
                             fin = 6;
                         }
 
@@ -158,7 +159,7 @@ pub fn get_skill_list(unit: Option<&Unit>, is_equip: bool, is_pack: bool, mut si
                 }
             }
         }
-    }
+    // }
       
     return original;
 }}
